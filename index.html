@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Stephanie's Cozy Cookbook</title>
+
+  <!-- React -->
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+  <!-- Babel -->
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5efe6;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <!-- Your data -->
+
+  <script src="./recipes-data.js"></script>
+
+  <!-- Your app -->
+
+  <script type="text/babel">
+
+    function App() {
+      return (
+        <div style={{ padding: 20 }}>
+          <h1>Stephanie's Cozy Cookbook 🍲</h1>
+
+          {RECIPES.map(recipe => (
+            <div key={recipe.id} style={{
+              background: "#fff",
+              padding: 16,
+              marginBottom: 12,
+              borderRadius: 10
+            }}>
+              <h2>{recipe.emoji} {recipe.title}</h2>
+              <p>{recipe.subtitle}</p>
+              <p><strong>Time:</strong> {recipe.time} mins</p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+
+  </script>
+
+</body>
+</html>
