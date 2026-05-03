@@ -14,6 +14,112 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* ── PIN LOCK SCREEN ── */
+  .pin-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: oklch(97% 0.018 80);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    font-family: 'Lato', system-ui, sans-serif;
+    animation: fadeIn 0.4s ease;
+  }
+  body.dark .pin-overlay { background: oklch(16% 0.02 60); }
+
+  .pin-card {
+    background: oklch(93% 0.025 78);
+    border-radius: 28px;
+    padding: 48px 44px 44px;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 28px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 8px 48px oklch(30% 0.05 50 / 0.12);
+    border: 1.5px solid oklch(89% 0.03 76);
+  }
+  body.dark .pin-card {
+    background: oklch(20% 0.025 58);
+    border-color: oklch(24% 0.03 55);
+    box-shadow: 0 8px 48px oklch(0% 0 0 / 0.4);
+  }
+
+  .pin-brand {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    text-align: center;
+  }
+  .pin-brand-icon { font-size: 44px; line-height: 1; }
+  .pin-brand h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px; font-weight: 700;
+    color: oklch(30% 0.05 50);
+    line-height: 1.2;
+  }
+  body.dark .pin-brand h1 { color: oklch(90% 0.03 60); }
+  .pin-brand p {
+    font-size: 13px;
+    color: oklch(55% 0.04 55);
+    margin-top: 2px;
+  }
+
+  .pin-dots {
+    display: flex; gap: 12px;
+  }
+  .pin-dot {
+    width: 16px; height: 16px;
+    border-radius: 99px;
+    border: 2px solid oklch(78% 0.09 50);
+    background: transparent;
+    transition: all 0.15s ease;
+  }
+  .pin-dot.filled { background: oklch(58% 0.12 42); border-color: oklch(58% 0.12 42); }
+  .pin-dot.error { border-color: oklch(55% 0.18 25); background: oklch(55% 0.18 25); animation: shake 0.4s ease; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .pin-error-msg {
+    font-size: 12.5px;
+    color: oklch(55% 0.18 25);
+    font-weight: 700;
+    height: 16px;
+    text-align: center;
+  }
+
+  /* PIN KEYPAD */
+  .pin-keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+  .pin-key {
+    height: 58px;
+    border-radius: 14px;
+    border: 1.5px solid oklch(89% 0.03 76);
+    background: oklch(97% 0.018 80);
+    color: oklch(22% 0.04 50);
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  body.dark .pin-key {
+    background: oklch(24% 0.03 55);
+    border-color: oklch(28% 0.03 55);
+    color: oklch(90% 0.03 60);
+  }
+  .pin-key:hover { background: oklch(92% 0.04 55); border-color: oklch(58% 0.12 42); transform: scale(1.03); }
+  .pin-key:active { transform: scale(0.96); background: oklch(58% 0.12 42); color: white; border-color: oklch(58% 0.12 42); }
+  .pin-key.del { font-size: 18px; color: oklch(55% 0.04 55); }
+  .pin-key.empty { pointer-events: none; background: transparent; border-color: transparent; }
+
+
   :root {
     --cream: oklch(97% 0.018 80);
     --cream-dark: oklch(93% 0.025 78);
@@ -636,6 +742,80 @@
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef } = React;
 
+const CORRECT_PIN = '030405';
+
+/* ── PIN LOCK SCREEN ── */
+function PinLock({ onUnlock }) {
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const handleKey = (digit) => {
+    if (pin.length >= 6) return;
+    const next = pin + digit;
+    setPin(next);
+    setError(false);
+    if (next.length === 6) {
+      setTimeout(() => {
+        if (next === CORRECT_PIN) {
+          localStorage.setItem('cookbook_unlocked', '1');
+          onUnlock();
+        } else {
+          setShake(true);
+          setError(true);
+          setTimeout(() => { setPin(''); setShake(false); }, 700);
+        }
+      }, 120);
+    }
+  };
+
+  const handleDel = () => { setPin(p => p.slice(0, -1)); setError(false); };
+
+  // Keyboard support
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key >= '0' && e.key <= '9') handleKey(e.key);
+      if (e.key === 'Backspace') handleDel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pin]);
+
+  const keys = ['1','2','3','4','5','6','7','8','9','empty','0','del'];
+
+  return (
+    <div className="pin-overlay">
+      <div className="pin-card">
+        <div className="pin-brand">
+          <div className="pin-brand-icon">🍳</div>
+          <h1>Stephanie's Cozy Cookbook</h1>
+          <p>Enter your 6-digit PIN to continue</p>
+        </div>
+        <div className="pin-dots">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className={`pin-dot${i < pin.length ? (shake ? ' error' : ' filled') : ''}`}
+            />
+          ))}
+        </div>
+        <div className="pin-error-msg">{error ? 'Incorrect PIN — try again' : ''}</div>
+        <div className="pin-keypad">
+          {keys.map((k, i) => (
+            k === 'empty' ? <div key={i} className="pin-key empty"></div> :
+            k === 'del' ? (
+              <button key={i} className="pin-key del" onClick={handleDel}>⌫</button>
+            ) : (
+              <button key={i} className="pin-key" onClick={() => handleKey(k)}>{k}</button>
+            )
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 /* ── HELPERS ── */
 const formatTime = (mins) => {
   if (mins < 60) return `${mins}m`;
@@ -885,6 +1065,15 @@ function RecipeCard({ recipe, isFav, onFav, onClick }) {
   );
 }
 
+/* ── ROOT WITH PIN GATE ── */
+function Root() {
+  const [unlocked, setUnlocked] = useState(
+    () => localStorage.getItem('cookbook_unlocked') === '1'
+  );
+  if (!unlocked) return <PinLock onUnlock={() => setUnlocked(true)} />;
+  return <App />;
+}
+
 /* ── MAIN APP ── */
 function App() {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -1059,7 +1248,7 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
 </script>
 </body>
 </html>
